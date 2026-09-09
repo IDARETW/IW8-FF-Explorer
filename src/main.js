@@ -16,9 +16,17 @@ import { decompileScript, highlightedGSC } from "./script-preview.js";
 const $ = (id) => document.getElementById(id);
 let assets = new Map(),
   importGeneration = 0;
-const icons = { image: "◈", model: "⬡", text: "≡", audio: "♫", binary: "▧" };
+const icons = {
+  scene: "⌘",
+  image: "◈",
+  model: "⬡",
+  text: "≡",
+  audio: "♫",
+  binary: "▧",
+};
 const categories = {
   all: "All files",
+  scene: "Scenes",
   model: "Models",
   image: "Images",
   text: "Data",
@@ -242,7 +250,7 @@ async function render() {
 
 async function importEntries(entries, label) {
   const generation = ++importGeneration;
-  notice("Opening collection�");
+  notice("Opening collection…");
   const incoming = new Map();
   for (const entry of entries) {
     const asset = makeAsset(
@@ -300,6 +308,7 @@ async function importEntries(entries, label) {
     meta.warnings.length > 0,
   );
   const first =
+    [...incoming.values()].find((a) => a.kind === "scene") ||
     [...incoming.values()].find((a) => a.kind === "model") ||
     [...incoming.values()].find((a) => a.kind === "image") ||
     [...incoming.values()][0];
@@ -446,7 +455,20 @@ async function selectAsset(asset, scroll = false) {
       block: "start",
     });
   try {
-    if (asset.kind === "model") {
+    if (asset.kind === "scene") {
+      const { showScene } = await import("./scene.js");
+      if (signal.aborted) return;
+      const cleanup = await showScene(
+        stage,
+        toolbar,
+        asset,
+        assets,
+        setInfo,
+        signal,
+      );
+      if (signal.aborted) cleanup();
+      else previewCleanup = cleanup;
+    } else if (asset.kind === "model") {
       const { showModel } = await import("./model.js");
       if (signal.aborted) return;
       const cleanup = await showModel(

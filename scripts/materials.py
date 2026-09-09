@@ -38,6 +38,12 @@ def catalogue(output):
                     for item in (fields.get('textureTable') or {}).get('values', [])]
         if name:
             materials[name] = {'textures': textures, 'technique': asset_name((fields.get('techniqueSet') or {}).get('name'))}
+    for path in output.glob('viewer_scenes/*.scene.json'):
+        scene = json.loads(path.read_text(encoding='utf-8'))
+        world = scene.get('world') or {}
+        if world.get('surfaceSet') and world.get('materials'):
+            surfaces[world['surfaceSet']] = [{'model': scene.get('name', 'world'), 'lod': 0,
+                                               'materials': world['materials']}]
     needed = {name for variants in surfaces.values() for variant in variants for name in variant['materials'] if name}
     colors = {texture['image'] for name in needed if name in materials for texture in materials[name]['textures'] if texture['slot'] in (0, 27) and texture['image']}
     images = set()

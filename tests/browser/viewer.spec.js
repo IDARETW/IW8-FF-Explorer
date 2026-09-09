@@ -8,7 +8,7 @@ const md5 = (text) => createHash("md5").update(text).digest("hex");
 test.beforeEach(async ({ context, baseURL }) => {
   if (!process.env.VIEWER_ACCESS_FILE)
     throw new Error(
-      "Set VIEWER_ACCESS_FILE to a configured viewer access JSON.",
+      "Set VIEWER_ACCESS_FILE to the existing workbench access JSON.",
     );
   const auth = JSON.parse(
     readFileSync(process.env.VIEWER_ACCESS_FILE, "utf8").replace(/^\uFEFF/, ""),
@@ -32,7 +32,7 @@ test.beforeEach(async ({ context, baseURL }) => {
     await route.continue({
       headers: {
         ...request.headers(),
-        Authorization: `Digest username="${auth.username}", realm="MW2019 Replay Fastfile Viewer", nonce="${nonce}", uri="${uri}", algorithm=MD5, qop=auth, nc=${nc}, cnonce="${cnonce}", response="${response}"`,
+        Authorization: `Digest username="${auth.username}", realm="MW164 Label Workbench", nonce="${nonce}", uri="${uri}", algorithm=MD5, qop=auth, nc=${nc}, cnonce="${cnonce}", response="${response}"`,
       },
     });
   });
@@ -73,6 +73,24 @@ test("large cached collection navigation timing", async ({page}, testInfo) => {
   const result={collectionMs,searchHandlerMs:search,selectionMs,geometryMs,texturedMs,longTasks:await page.evaluate(()=>window.navLongTasks)};
   console.log('NAV_TIMING',testInfo.project.name,JSON.stringify(result));
   await testInfo.attach('navigation-timing',{body:JSON.stringify(result,null,2),contentType:'application/json'});
+});
+
+test("saved mp_frontend extraction assembles its Replay scene", async ({page}, testInfo) => {
+  test.skip(!process.env.VIEWER_LIVE_SCENE, "Saved mp_frontend extraction required.");
+  test.setTimeout(180000);
+  await page.goto('/');
+  await page.getByRole('button',{name:'Extractions',exact:true}).click();
+  await page.locator('.job-row').filter({hasText:'mp_frontend.ff'}).first().click();
+  await page.getByRole('button',{name:'Open available files',exact:true}).click();
+  await expect(page.locator('.asset-row').first()).toBeVisible({timeout:90000});
+  await page.getByLabel('Search assets',{exact:true}).fill('mp_frontend.scene.json');
+  const scene=page.locator('.asset-row').filter({hasText:'mp_frontend.scene.json'});
+  await expect(scene).toHaveCount(1);
+  await scene.click();
+  await expect(page.locator('.model-canvas')).toBeVisible({timeout:30000});
+  await expect(page.locator('.model-texture-status')).toContainText('Scene ready',{timeout:120000});
+  await expect(page.locator('.detail-grid')).toContainText('694 / 694');
+  await page.screenshot({path:`.local/${testInfo.project.name}-mp-frontend-scene.png`,fullPage:true});
 });
 
 test("GSC source is syntax highlighted without interpreting embedded HTML", async ({page}) => {
@@ -146,6 +164,29 @@ test("geometry opens before delayed textures and abandoned previews cannot take 
   await page.getByRole('button',{name:'Open fixture/mesh',exact:true}).click();
   await expect(page.locator('.model-texture-status')).toHaveText('2 / 2 surfaces textured');
   expect(await page.evaluate(()=>window.firstModelCanvas===document.querySelector('.model-canvas'))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("Replay scene manifests assemble instanced textured models", async ({page}) => {
+  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/');
+  const files=materialFixture(true);
+  files['viewer_scenes/fixture.scene.json']=strToU8(JSON.stringify({
+    format:'mw19-replay-scene',version:1,name:'maps/mp/fixture.d3dbsp',coordinateSystem:'iw8-z-up-inches',
+    world:{geometry:'missing.world.glb',surfaceSet:'viewer/world/fixture',materials:[]},models:[{name:'fixture_model',surface:'fixture/mesh',geometry:'../assets/xmodelsurfs/fixture.glb',lod:1,
+      instances:[
+        {translationFixed:[0,0,0],rotation:[0,0,0,1],scale:1},
+        {translationFixed:[163840,0,0],rotation:[0,0,0,1],scale:1},
+      ]}],
+    counts:{placements:2,models:1,worldSurfaces:0,missingModels:0,skippedPlacements:0},missingModels:[],
+    unsupported:{splinedModels:0,clutterCollections:0},
+  }));
+  await page.locator('#file-input').setInputFiles({name:'scene.zip',mimeType:'application/zip',buffer:Buffer.from(zipSync(files))});
+  await expect(page.locator('.model-canvas')).toBeVisible();
+  await expect(page.locator('.model-texture-status')).toContainText('Scene ready');
+  await expect(page.locator('.detail-grid')).toContainText('2 / 2');
+  await expect(page.locator('.detail-grid')).toContainText('2');
+  await expect(page.locator('.detail-grid')).toContainText('World unavailable');
   expect(errors).toEqual([]);
 });
 

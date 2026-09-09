@@ -20,6 +20,7 @@ export function safePath(value) {
 }
 
 export function classify(path) {
+  if (path.toLowerCase().endsWith(".scene.json")) return "scene";
   const ext = path.toLowerCase().split(".").pop();
   if (["dds", "png", "jpg", "jpeg", "webp", "gif", "avif", "bmp"].includes(ext))
     return "image";

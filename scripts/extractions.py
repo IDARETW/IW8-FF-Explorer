@@ -17,6 +17,8 @@ import importlib.util
 
 _material_spec = importlib.util.spec_from_file_location('zone_materials', Path(__file__).with_name('materials.py'))
 _materials = importlib.util.module_from_spec(_material_spec); _material_spec.loader.exec_module(_materials)
+_scene_spec = importlib.util.spec_from_file_location('zone_scenes', Path(__file__).with_name('scenes.py'))
+_scenes = importlib.util.module_from_spec(_scene_spec); _scene_spec.loader.exec_module(_scenes)
 
 ACTIVE = {'queued', 'running'}
 TERMINAL = {'complete', 'partial', 'failed', 'cancelled'}
@@ -304,6 +306,14 @@ class ExtractionManager:
 
     def prepare_materials(self, job):
         output = self.output / job['id']
+        job['material_warnings'] = []
+        try:
+            scenes = _scenes.save_scenes(output)
+        except Exception as error:
+            # Scene assembly is a derived preview. Preserve every successfully
+            # extracted asset if a damaged world document cannot be assembled.
+            scenes = []
+            job['material_warnings'].append(f'Scene reconstruction unavailable: {error}')
         catalog = _materials.catalogue(output)
         # Map fastfiles contain model/image data, while their techsets companion
         # owns the named Material records. Never guess texture names from a mesh.
@@ -314,7 +324,7 @@ class ExtractionManager:
         if not stem.startswith('techsets_'):
             candidates.extend([source_dir / f'techsets_{stem}.ff', zone / f'techsets_{stem}.ff'])
         candidates.extend(zone / f'techsets_{name}.ff' for name in ('common_mp', 'common', 'common_base_mp', 'common_core_mp', 'common_stream_mp', 'global_stream_mp', 'global_mp', 'global', 'common_br_mp'))
-        seen = set(); job['material_sources'] = []; job['image_sources'] = []; job['material_warnings'] = []
+        seen = set(); job['material_sources'] = []; job['image_sources'] = []
         for source in candidates:
             if not catalog['missing_materials'] or job['status'] == 'cancelled': break
             if not source.is_file() or source.resolve() in seen: continue
@@ -359,6 +369,9 @@ class ExtractionManager:
             catalog = _materials.catalogue(output)
         catalog = _materials.save_catalogue(output)
         job['material_version'] = _materials.VERSION
+        job['scene_summary'] = {'scenes': len(scenes),
+                                'placements': sum(s['counts']['placements'] for s in scenes),
+                                'world_surfaces': sum(s['counts']['worldSurfaces'] for s in scenes)}
         job['material_only'] = False
         job['material_summary'] = {'surface_sets': len(catalog['surfaces']), 'materials': len(catalog['materials']), 'missing': len(catalog['missing_materials']), 'missing_images': len(catalog['missing_images'])}
 

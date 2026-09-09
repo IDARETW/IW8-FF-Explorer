@@ -1,4 +1,4 @@
-# MW2019 Replay Fastfile Viewer
+# IW8 FF Explorer
 
 A local web viewer for legally installed **Modern Warfare 2019 1.20 Replay** files. Connect your own Replay installation, search its `.ff` files, extract a selected fastfile through ACTS, and inspect the resulting textures, models, materials, sounds, GSC source, JSON and binary data from a desktop or phone.
 
@@ -10,6 +10,7 @@ The repository contains no game executable, fastfile, XPak, extracted asset, acc
 - Uses the [IDARETW ACTS Replay fork](https://github.com/IDARETW/atian-cod-tools/tree/codex/mw2019-complete) to extract a selected file with all supported asset types and geometry sidecars.
 - Applies matching Replay `.fp` and `.fc` files through ACTS, validates patch headers, and records each extraction separately.
 - Shows DDS images, GLB/glTF/OBJ models, material-linked base-color and cutout textures, supported audio, structured records, hexadecimal data, and syntax-highlighted GSC source.
+- Reconstructs applicable `gfx_map` scenes from Replay data: BSP surfaces are exported with positions, normals and UVs, while static XModels are instanced at their fixed-point game placements with packed rotations and scale.
 - Runs entirely on the computer holding the game installation. It binds to `127.0.0.1`; an optional authenticated tunnel can make that local viewer reachable from a phone.
 
 This is an inspection and export tool. It does not modify the game installation, inject into the game, run game code, or make unsigned fastfiles load in-game.
@@ -75,7 +76,7 @@ ACTS uses the configured game executable and the populated v13 XPaks found in it
 
 An extraction can finish as **Partial** when some payloads are absent from the local archives, a stream is damaged, a layout remains unsupported, or a configured output limit is reached. The viewer preserves available output and shows the ACTS manifest and log. A partial result is not presented as a complete dump.
 
-The model preview applies available base-color and opacity/cutout textures. It is not an in-game renderer: layered shaders, normal/specular packing, blended transparency, skinning, morphs, subdivision, and full LOD assembly are outside this viewer.
+The model and scene previews apply available base-color and opacity/cutout textures. Scene manifests list missing streamed meshes and unsupported placement classes instead of filling them with guessed assets. Layered shaders, normal/specular packing, skinning, morphs, subdivision, dynamic/scripted entities and complete terrain or splined-model reconstruction remain outside the current viewer.
 
 ## Development and verification
 

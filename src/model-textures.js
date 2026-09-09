@@ -8,7 +8,7 @@ export function expandOpacityChannel(rgba) {
   return rgba;
 }
 
-async function readColorTexture(asset, signal, opacity = false) {
+export async function readColorTexture(asset, signal, opacity = false) {
   if (asset.size > 256 * 1024 ** 2)
     throw new Error(`${asset.name}: texture exceeds 256 MB.`);
   if (signal.aborted) throw new DOMException("Preview cancelled", "AbortError");

@@ -231,7 +231,7 @@ export async function setupExtractionHistory() {
               if (job.status === "complete" && job.files) {
                 window.dispatchEvent(
                   new CustomEvent("zone-extraction-status", {
-                    detail: `Opening ${job.name}�`,
+                    detail: `Opening ${job.name}…`,
                   }),
                 );
                 const entries = await extractionEntries(job.id);
