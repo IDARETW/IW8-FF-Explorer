@@ -10,7 +10,7 @@ The repository contains no game executable, fastfile, XPak, extracted asset, acc
 - Uses the [IDARETW ACTS Replay fork](https://github.com/IDARETW/atian-cod-tools/tree/codex/mw2019-complete) to extract a selected file with all supported asset types and geometry sidecars.
 - Applies matching Replay `.fp` and `.fc` files through ACTS, validates patch headers, and records each extraction separately.
 - Shows DDS images, GLB/glTF/OBJ models, material-linked base-color and cutout textures, supported audio, structured records, hexadecimal data, and syntax-highlighted GSC source.
-- Reconstructs applicable `gfx_map` scenes from Replay data: BSP surfaces are exported with positions, normals and UVs, while static XModels are instanced at their fixed-point game placements with packed rotations and scale.
+- Reconstructs applicable `gfx_map` scenes from Replay data: BSP surfaces are exported with positions, normals and UVs, while static XModels are instanced at their fixed-point game placements with packed rotations and scale. Large maps using ACTS compact-array encoding are decoded automatically, and structured map spawns provide a useful initial playable-area view without discarding distant scenery.
 - Runs entirely on the computer holding the game installation. It binds to `127.0.0.1`; an optional authenticated tunnel can make that local viewer reachable from a phone.
 
 This is an inspection and export tool. It does not modify the game installation, inject into the game, run game code, or make unsigned fastfiles load in-game.
@@ -77,6 +77,8 @@ ACTS uses the configured game executable and the populated v13 XPaks found in it
 An extraction can finish as **Partial** when some payloads are absent from the local archives, a stream is damaged, a layout remains unsupported, or a configured output limit is reached. The viewer preserves available output and shows the ACTS manifest and log. A partial result is not presented as a complete dump.
 
 The model and scene previews apply available base-color and opacity/cutout textures. Scene manifests list missing streamed meshes and unsupported placement classes instead of filling them with guessed assets. Layered shaders, normal/specular packing, skinning, morphs, subdivision, dynamic/scripted entities and complete terrain or splined-model reconstruction remain outside the current viewer.
+
+Large `gfx_map` and `gfx_map_trzone` documents are accepted up to 512 MiB each for scene reconstruction. The generated browser preview is bounded to 100,000 world surfaces, 250,000 static placements, 512 textures and 384 MiB of decoded texture pixels. A map that exceeds a preview limit keeps its other extracted assets available and reports why its world preview was omitted.
 
 ## Development and verification
 

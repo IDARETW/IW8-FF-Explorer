@@ -36,6 +36,25 @@ export function replayPlacementMatrix(instance) {
   );
 }
 
+export function replayFocusBox(bounds) {
+  if (
+    !Array.isArray(bounds?.min) ||
+    !Array.isArray(bounds?.max) ||
+    bounds.min.length !== 3 ||
+    bounds.max.length !== 3
+  )
+    return null;
+  const box = new THREE.Box3();
+  for (const x of [bounds.min[0], bounds.max[0]])
+    for (const y of [bounds.min[1], bounds.max[1]])
+      for (const z of [bounds.min[2], bounds.max[2]]) {
+        const point = new THREE.Vector3(Number(x), Number(y), Number(z));
+        if (![point.x, point.y, point.z].every(Number.isFinite)) return null;
+        box.expandByPoint(point.applyQuaternion(BASIS).multiplyScalar(0.0254));
+      }
+  return box.isEmpty() ? null : box;
+}
+
 function button(toolbar, text, run) {
   const value = document.createElement("button");
   value.className = "button";
@@ -151,7 +170,9 @@ export async function showScene(stage, toolbar, asset, assets, onInfo, signal) {
       Models: `${loadedModels.toLocaleString()} / ${sceneDoc.models.length.toLocaleString()}`,
       "Mesh surfaces": loadedSurfaces.toLocaleString(),
       Textured: texturedSurfaces.toLocaleString(),
-      "World surfaces": sceneDoc.counts?.worldSurfaces || 0,
+      "World surfaces": Number(
+        sceneDoc.counts?.worldSurfaces || 0,
+      ).toLocaleString(),
       ...(missingGeometry ? { "Missing geometry": missingGeometry } : {}),
       ...(skippedPlacements
         ? { "Skipped placements": skippedPlacements }
@@ -172,8 +193,7 @@ export async function showScene(stage, toolbar, asset, assets, onInfo, signal) {
     });
   }
 
-  function frame() {
-    const box = new THREE.Box3().setFromObject(root);
+  function frameBox(box) {
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3()),
       size = box.getSize(new THREE.Vector3());
@@ -196,7 +216,12 @@ export async function showScene(stage, toolbar, asset, assets, onInfo, signal) {
     dirty = true;
   }
 
+  const focusBox = replayFocusBox(sceneDoc.focusBounds);
+  const frame = () => frameBox(new THREE.Box3().setFromObject(root));
+  const frameFocus = () => frameBox(focusBox || new THREE.Box3().setFromObject(root));
+
   button(toolbar, "Frame all", frame);
+  if (focusBox) button(toolbar, "Playable area", frameFocus);
   checkbox(toolbar, "Wireframe", false, (value) => {
     for (const material of materials) {
       material.wireframe = value;
@@ -418,7 +443,7 @@ export async function showScene(stage, toolbar, asset, assets, onInfo, signal) {
     try {
       await mapConcurrent(sceneDoc.models, 3, addModel);
       if (!signal.aborted && !disposed) {
-        frame();
+        frameFocus();
         report(`Scene ready · ${loadedPlacements.toLocaleString()} placements`);
       }
     } catch (error) {

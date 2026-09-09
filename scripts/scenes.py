@@ -9,6 +9,8 @@ FORMAT = 'mw19-replay-scene'
 VERSION = 1
 MAX_WORLD_BUFFER_BYTES = 512 * 1024 ** 2
 MAX_WORLD_SURFACES = 100_000
+MAX_PLACEMENTS = 250_000
+DOCUMENT_LIMITS = {'gfx_map': 512 * 1024 ** 2, 'gfx_map_trzone': 512 * 1024 ** 2}
 
 
 def _name(value):
@@ -19,7 +21,8 @@ def _name(value):
 def _docs(output, pool):
     for directory in output.glob(f'mw19replay/*/assets/{pool}'):
         for path in directory.rglob('*.asset.json'):
-            if path.is_symlink() or not path.resolve().is_relative_to(output) or path.stat().st_size > 32 * 1024 ** 2:
+            limit = DOCUMENT_LIMITS.get(pool, 32 * 1024 ** 2)
+            if path.is_symlink() or not path.resolve().is_relative_to(output) or path.stat().st_size > limit:
                 continue
             try:
                 document = json.loads(path.read_text(encoding='utf-8'))
@@ -36,6 +39,58 @@ def _values(value):
         if isinstance(value.get('v'), list): return value['v']
         if isinstance(value.get('__s1'), dict): return list(value['__s1'].values())
     return []
+
+
+def _records(value, expected_type, record_format, names):
+    values = _values(value)
+    if values: return values
+    if not isinstance(value, dict) or not str(value.get('type', '')).endswith(expected_type): return []
+    count, stride = int(value.get('count', 0)), struct.calcsize(record_format)
+    if count < 0 or count > MAX_PLACEMENTS or int(value.get('stride', 0)) != stride:
+        raise ValueError(f'invalid compact {expected_type} record extent')
+    encoded = value.get('bytes', '')
+    if not isinstance(encoded, str) or len(encoded) != count * stride * 2:
+        raise ValueError(f'invalid compact {expected_type} byte count')
+    try: payload = bytes.fromhex(encoded)
+    except ValueError as error: raise ValueError(f'invalid compact {expected_type} encoding') from error
+    return [dict(zip(names, record)) for record in struct.iter_unpack(record_format, payload)]
+
+
+def _collections(value):
+    return _records(value, 'GfxStaticModelCollection', '<IIHHHBB',
+                    ('firstInstance', 'instanceCount', 'smodelIndex', 'transientGfxWorldPlaced', 'clutterIndex', 'flags', 'pad'))
+
+
+def _instances(value):
+    records = _records(value, 'GfxSModelInstanceData', '<iiiIIf',
+                       ('tx', 'ty', 'tz', 'orientation0', 'orientation1', 'scale'))
+    if records and 'tx' in records[0]:
+        return [{'translation': [v['tx'], v['ty'], v['tz']],
+                 'orientation': [v['orientation0'], v['orientation1']], 'scale': v['scale']} for v in records]
+    return records
+
+
+def _focus_bounds(output, world_key):
+    for _, fields in _docs(output, 'map_ents'):
+        if Path(_name(fields.get('name'))).stem.replace('.d3dbsp', '') != world_key:
+            continue
+        groups = {}
+        for spawn in _values((fields.get('spawnList') or {}).get('spawns')):
+            origin = _values(spawn.get('origin'))
+            if len(origin) != 3 or not all(isinstance(v, (int, float)) and math.isfinite(v) for v in origin):
+                continue
+            identity = json.dumps(spawn.get('name'), sort_keys=True, separators=(',', ':'))
+            groups.setdefault(identity, []).append([float(v) for v in origin])
+        points = max(groups.values(), key=len, default=[])
+        if len(points) < 4: return None
+        low = [min(point[axis] for point in points) for axis in range(3)]
+        high = [max(point[axis] for point in points) for axis in range(3)]
+        horizontal = max(high[0] - low[0], high[1] - low[1], 512.0)
+        padding = max(128.0, horizontal * .25)
+        return {'source': 'map-entity-spawn-cluster',
+                'min': [low[0] - padding, low[1] - padding, low[2] - 128.0],
+                'max': [high[0] + padding, high[1] + padding, high[2] + max(512.0, padding)]}
+    return None
 
 
 def _geometry_files(output):
@@ -195,7 +250,8 @@ def save_scenes(output):
         world_name = _name(world.get('name')) or _name(world.get('baseName'))
         raw_key = Path(world_name).stem.replace('.d3dbsp','') or 'world'
         key = re.sub(r'[^A-Za-z0-9_.-]', '_', raw_key)[:128] or 'world'
-        static = world.get('smodels') or {}; refs = _values(static.get('models')); collections = _values(static.get('collections')); instances = _values(static.get('smodelInstanceData'))
+        static = world.get('smodels') or {}; refs = _values(static.get('models'))
+        collections = _collections(static.get('collections')); instances = _instances(static.get('smodelInstanceData'))
         grouped, missing, skipped = {}, set(), 0
         for collection in collections:
             model_index = int(collection.get('smodelIndex', -1)); ref = refs[model_index] if 0 <= model_index < len(refs) else {}
@@ -224,6 +280,7 @@ def save_scenes(output):
             scene_models.append({**group, 'geometry': '../' + group['geometry']})
         scene = {'format': FORMAT, 'version': VERSION, 'name': world_name, 'coordinateSystem': 'iw8-z-up-inches',
                  'world': world_record, 'models': scene_models,
+                 **({'focusBounds': focus} if (focus := _focus_bounds(output, raw_key)) else {}),
                  'counts': {'placements': sum(len(v['instances']) for v in grouped.values()), 'models': len(grouped),
                             'worldSurfaces': len(world_materials), 'missingModels': len(missing), 'skippedPlacements': skipped},
                  'missingModels': sorted(missing),

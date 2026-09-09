@@ -19,6 +19,33 @@ class SceneTests(unittest.TestCase):
         orientation = scenes.unpack_quaternion({'v': [0x80008000, 0xffff8000]})
         self.assertAlmostEqual(sum(value * value for value in orientation), 1.0)
 
+    def test_compact_large_map_placement_arrays_are_decoded(self):
+        collections = struct.pack('<IIHHHBB', 7, 2, 3, 4, 5, 0x81, 0)
+        instances = struct.pack('<iiiIIf', -4096, 8192, 12288, 0x80008000, 0xffff8000, 1.25)
+        collection = scenes._collections({'type': 'GfxStaticModelCollection', 'stride': 16,
+            'count': 1, 'encoding': 'hex-little-endian', 'bytes': collections.hex()})[0]
+        placement = scenes._instances({'type': 'GfxSModelInstanceData', 'stride': 24,
+            'count': 1, 'encoding': 'hex-little-endian', 'bytes': instances.hex()})[0]
+        self.assertEqual((collection['firstInstance'], collection['instanceCount'], collection['smodelIndex']), (7, 2, 3))
+        self.assertEqual(placement['translation'], [-4096, 8192, 12288])
+        self.assertEqual(placement['orientation'], [0x80008000, 0xffff8000])
+        self.assertAlmostEqual(placement['scale'], 1.25)
+
+    def test_focus_bounds_use_the_densest_spawn_class(self):
+        groups = []
+        for index, origin in enumerate(((-100, 200, 10), (-50, 220, 12), (0, 250, 14), (50, 300, 16))):
+            groups.append({'name': {'value': 7}, 'origin': {'v': list(origin)}})
+        groups.append({'name': {'value': 9}, 'origin': {'v': [10000, 10000, 10000]}})
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root); folder = output / 'mw19replay' / 'map' / 'assets' / 'map_ents'; folder.mkdir(parents=True)
+            doc = {'format': 'mw19-asset-json', 'pool': 'map_ents', 'asset': {'fields': {
+                'name': {'string': 'maps/mp/map.d3dbsp'}, 'spawnList': {'spawns': {'values': groups}}}}}
+            (folder / 'map.asset.json').write_text(__import__('json').dumps(doc), encoding='utf-8')
+            focus = scenes._focus_bounds(output, 'map')
+            self.assertEqual(focus['source'], 'map-entity-spawn-cluster')
+            self.assertLess(focus['min'][0], -100)
+            self.assertLess(focus['max'][0], 10000)
+
     def test_unsafe_world_name_is_portable_and_bad_geometry_keeps_scene(self):
         with tempfile.TemporaryDirectory() as root:
             output = Path(root)

@@ -93,6 +93,24 @@ test("saved mp_frontend extraction assembles its Replay scene", async ({page}, t
   await page.screenshot({path:`.local/${testInfo.project.name}-mp-frontend-scene.png`,fullPage:true});
 });
 
+test("saved mp_shipment extraction assembles compact Replay placement arrays", async ({page}, testInfo) => {
+  test.skip(!process.env.VIEWER_LIVE_SHIPMENT, "Saved mp_shipment extraction required.");
+  test.setTimeout(360000);
+  await page.goto('/');
+  await page.getByRole('button',{name:'Extractions',exact:true}).click();
+  await page.locator('.job-row').filter({hasText:'mp_shipment.ff'}).first().click();
+  await expect(page.locator('.asset-row').first()).toBeVisible({timeout:90000});
+  await page.getByLabel('Search assets',{exact:true}).fill('mp_shipment.scene.json');
+  const scene=page.locator('.asset-row').filter({hasText:'mp_shipment.scene.json'});
+  await expect(scene).toHaveCount(1);
+  await scene.click();
+  await expect(page.locator('.model-canvas')).toBeVisible({timeout:30000});
+  await expect(page.locator('.model-texture-status')).toContainText('Scene ready',{timeout:300000});
+  await expect(page.locator('.detail-grid')).toContainText('9,534 / 9,534');
+  await expect(page.locator('.detail-grid')).toContainText('1,039');
+  await page.screenshot({path:`.local/${testInfo.project.name}-mp-shipment-scene.png`,fullPage:true});
+});
+
 test("GSC source is syntax highlighted without interpreting embedded HTML", async ({page}) => {
   await page.goto('/');
   const source='main() { if (true) return "<img src=x onerror=window.gscInjected=true>"; // comment\n}';
