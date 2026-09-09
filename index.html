@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#111018" />
+    <meta
+      name="description"
+      content="Explore fastfile extractions. Preview textures, inspect models, and browse asset data on your device."
+    />
+    <title>Zone · Fastfile explorer</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <a class="skip" href="#workspace">Skip to workspace</a>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Zone home"
+        ><span class="brand-mark">Z</span
+        ><span
+          >ZONE<span class="brand-caption">FASTFILE EXPLORER</span></span
+        ></a
+      >
+      <span class="edition">MW2019 <span>/</span> IW8</span>
+      <div class="top-actions">
+        <button
+          class="button quiet extraction-option hidden"
+          id="extractions-button"
+        >
+          Extractions
+        </button>
+        <span class="privacy"><i></i> Private workspace</span
+        ><button class="button quiet" id="help-button">Help</button
+        ><button class="button primary" id="import-button">
+          ＋ Import extraction
+        </button>
+      </div>
+    </header>
+    <main id="workspace">
+      <section class="welcome" id="welcome">
+        <div class="eyebrow">YOUR ASSETS, UP CLOSE</div>
+        <h1>Inside the zone.</h1>
+        <p class="welcome-copy">
+          Explore your fastfile extractions. Inspect every texture,<br
+            class="desktop-break"
+          />
+          turn a model around, and find the details that matter.
+        </p>
+        <div class="drop-intro" id="drop-intro">
+          <div class="upload-symbol" aria-hidden="true">↥</div>
+          <h2>Drop a fastfile or extraction here</h2>
+          <p>A .ff, a ZIP, a folder, or a selection of asset files.</p>
+          <div class="import-actions">
+            <button class="button primary" id="files-button">
+              Choose files</button
+            ><button class="button" id="folder-button">Open folder</button
+            ><button class="button server-option hidden" id="server-button">
+              Browse server files
+            </button>
+          </div>
+          <span class="subtle"
+            >Assets open locally. Fastfiles are extracted by ACTS on your
+            PC.</span
+          >
+        </div>
+        <div class="welcome-bottom">
+          <div>
+            <span class="eyebrow">TAKE A LOOK AROUND</span>
+            <p>No extraction handy? Try a small sample collection.</p>
+          </div>
+          <button class="button" id="demo-button">
+            Open demo <span>↗</span>
+          </button>
+        </div>
+        <div class="feature-row">
+          <span
+            >◈ <b>Texture inspection</b
+            ><small>DDS · PNG · WEBP + more</small></span
+          ><span>⬡ <b>3D model viewer</b><small>GLB · glTF · OBJ</small></span
+          ><span
+            >⌘ <b>Asset data</b
+            ><small>JSON · scripts · audio · binary</small></span
+          >
+        </div>
+      </section>
+      <section class="collection hidden" id="collection">
+        <div class="collection-heading">
+          <div>
+            <div class="eyebrow">EXTRACTION WORKSPACE</div>
+            <h1 id="collection-title">Asset library</h1>
+          </div>
+          <button class="button quiet" id="clear-button">
+            Clear collection
+          </button>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="workspace-grid">
+          <section class="library" aria-label="Asset library">
+            <div class="library-toolbar">
+              <label class="search"
+                ><span aria-hidden="true">⌕</span
+                ><input
+                  id="search"
+                  type="search"
+                  placeholder="Search assets or paths…"
+                  aria-label="Search assets"
+                  autocomplete="off" /></label
+              ><select id="sort" aria-label="Sort assets">
+                <option value="name">Name ↑</option>
+                <option value="size">Largest first</option>
+                <option value="type">Type</option>
+              </select>
+            </div>
+            <div
+              class="kind-tabs"
+              id="kind-tabs"
+              aria-label="Asset category"
+            ></div>
+            <div class="pool-row">
+              <label for="pool">Pool</label
+              ><select id="pool">
+                <option value="">All asset types</option></select
+              ><span id="result-count"></span>
+            </div>
+            <div
+              class="asset-list"
+              id="asset-list"
+              role="list"
+              aria-label="Assets"
+            ></div>
+            <div class="pagination">
+              <button class="button quiet" id="previous">← Previous</button
+              ><span id="page-label"></span
+              ><button class="button quiet" id="next">Next →</button>
+            </div>
+          </section>
+          <section
+            class="inspector"
+            id="inspector"
+            aria-label="Asset inspector"
+          >
+            <div class="inspector-empty">
+              <span>◈</span>
+              <h2>Select an asset</h2>
+              <p>Its preview and details will appear here.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span
+        >ZONE <span class="footer-divider">/</span> An extraction
+        workspace</span
+      ><span>Local session <span class="footer-divider">·</span> v0.1</span>
+    </footer>
+    <div
+      id="notice"
+      role="status"
+      aria-live="polite"
+      class="notice hidden"
+    ></div>
+    <div class="drag-overlay hidden" id="drag-overlay">
+      <span>↥</span>
+      <h2>Drop to open</h2>
+      <p>Add files to this collection</p>
+    </div>
+    <dialog id="import-dialog">
+      <div class="dialog-header">
+        <h2>Import extraction</h2>
+        <button class="icon-button" data-close aria-label="Close dialog">
+          ×
+        </button>
+      </div>
+      <p>
+        Open the folder or ZIP produced by the fastfile exporter. You can also
+        select individual files.
+      </p>
+      <div class="dialog-options">
+        <button class="button primary" id="dialog-files">
+          Choose files or ZIP</button
+        ><button class="button" id="dialog-folder">Open folder</button
+        ><button class="button server-option hidden" id="dialog-server">
+          Browse server files
+        </button>
+      </div>
+      <p class="subtle">
+        Asset files stay in this browser tab. Fastfiles are uploaded to your PC
+        for automatic ACTS extraction. Server files are read over your
+        authenticated connection when needed. Completed extractions stay in the
+        server cache.
+      </p>
+    </dialog>
+    <dialog id="server-dialog">
+      <div class="dialog-header">
+        <h2>Files on your game PC</h2>
+        <button
+          class="icon-button"
+          data-close
+          aria-label="Close server browser"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Select a .ff to extract and open it with ACTS. You can also open an
+        existing extraction folder, ZIP, or individual asset files.
+      </p>
+      <label class="server-root-label"
+        >Location
+        <select id="server-root" aria-label="Server location"></select
+      ></label>
+      <div class="server-pathbar">
+        <button class="button" id="server-up" aria-label="Parent server folder">
+          ↑</button
+        ><span id="server-path"></span>
+      </div>
+      <div
+        class="server-files"
+        id="server-files"
+        aria-label="Server files"
+      ></div>
+      <p id="server-message" class="subtle" role="status"></p>
+      <div class="server-actions">
+        <button class="button" id="server-open-folder">Open this folder</button
+        ><button class="button primary" id="server-open-selected" disabled>
+          Open selected
+        </button>
+      </div>
+    </dialog>
+    <dialog id="help-dialog">
+      <div class="dialog-header">
+        <h2>A closer look at your extraction</h2>
+        <button class="icon-button" data-close aria-label="Close help">
+          ×
+        </button>
+      </div>
+      <div class="help-copy">
+        <h3>1. Open a fastfile</h3>
+        <p>
+          Select a Replay .ff file from your device or the server browser. ACTS
+          extracts all supported assets and GLB model previews automatically,
+          then opens the output. Progress and previous results are in
+          Extractions. You can also open an existing extracted folder or ZIP.
+          Include <code>manifest.json</code> and <code>assets.jsonl</code> to
+          attach asset names and export details.
+        </p>
+        <h3>2. Preview an asset</h3>
+        <p>
+          DDS textures include mip, face, array layer, and volume slice controls
+          where available. Common BC formats decode on the CPU, including BC7.
+          Float texture previews clamp values to 0–1.
+        </p>
+        <p>
+          Use GLB, glTF, or OBJ for models. ACTS Replay can create a
+          <code>.geometry.glb</code> sidecar with <code>--geometry</code>. This
+          shows base surface geometry. Packed <code>.shared.bin</code> files
+          alone do not contain enough information for a model preview.
+        </p>
+        <p>
+          Replay models use their matching material and DDS color textures. The
+          server loads companion materials and referenced shared textures
+          automatically. Use Textures to compare with plain geometry, or
+          Material set when several model variants share the same mesh. Missing
+          dependencies are shown in the preview. For portable ZIPs, include the
+          model, image files, asset journals and material records.
+        </p>
+        <h3>3. Move around</h3>
+        <p>
+          Drag to rotate. Use the wheel or pinch to zoom. Right-drag or use two
+          fingers to pan. Use Frame to center the model, Wireframe to inspect
+          edges, or Z-up for raw game-oriented models.
+        </p>
+        <h3>Local by design</h3>
+        <p>
+          Ordinary imported asset files remain in memory on your device.
+          Fastfile uploads and extracted output are saved in the server cache.
+          The authenticated PC service is required for automatic extraction and
+          host file browsing. Files referenced by a model must be imported with
+          it. External URLs in models are blocked.
+        </p>
+        <p>
+          ZIP imports allow 512 MB expanded, 256 MB per file, and 20,000 files.
+          For larger collections, import a folder and select smaller preview
+          files. Text previews show the first 1 MB; downloads retain the
+          complete original.
+        </p>
+      </div>
+    </dialog>
+    <dialog id="progress-dialog">
+      <h2 id="progress-title">Opening extraction…</h2>
+      <progress id="import-progress" max="100"></progress>
+      <p id="progress-detail">Reading files</p>
+      <button class="button" id="cancel-import">Cancel</button>
+    </dialog>
+    <dialog id="extraction-dialog">
+      <div class="dialog-header">
+        <h2 id="extraction-title">Extracting fastfile</h2>
+        <button
+          class="icon-button"
+          data-close
+          aria-label="Close extraction progress"
+        >
+          ×
+        </button>
+      </div>
+      <span id="extraction-state" class="extraction-state">Preparing</span>
+      <progress id="extraction-progress" max="100"></progress>
+      <p id="extraction-message" role="status" aria-live="polite"></p>
+      <p id="extraction-counts" class="subtle"></p>
+      <details class="extraction-diagnostics">
+        <summary>ACTS output</summary>
+        <pre id="extraction-log"></pre>
+      </details>
+      <div class="server-actions">
+        <button class="button" id="extraction-cancel">Cancel extraction</button
+        ><button class="button primary" id="extraction-open" hidden>
+          Open available files</button
+        ><button class="button quiet" data-close>Continue browsing</button>
+      </div>
+    </dialog>
+    <dialog id="jobs-dialog">
+      <div class="dialog-header">
+        <h2>Fastfile extractions</h2>
+        <button
+          class="icon-button"
+          data-close
+          aria-label="Close extraction history"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Completed extractions stay on the server. Open a previous result without
+        extracting it again.
+      </p>
+      <div id="job-list" class="job-list"></div>
+    </dialog>
+    <input type="file" id="file-input" multiple hidden />
+    <input type="file" id="folder-input" webkitdirectory multiple hidden />
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

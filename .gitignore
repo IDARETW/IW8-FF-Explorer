@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.local/
+test-results/
+playwright-report/
+public/wasm/
+public/licenses/
+__pycache__/
+*.log
+.env*

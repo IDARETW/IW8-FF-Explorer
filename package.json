@@ -1,0 +1,22 @@
+{
+  "name": "mw19-replay-fastfile-viewer",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "node scripts/copy-wasm.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "texture2ddecoder-wasm": "1.2.2",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "prettier": "3.9.6",
+    "vite": "8.2.2"
+  }
+}
